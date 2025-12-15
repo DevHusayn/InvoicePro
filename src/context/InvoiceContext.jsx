@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { apiFetch } from '../utils/api';
 
 const InvoiceContext = createContext();
 
@@ -10,57 +11,83 @@ export const useInvoice = () => {
     return context;
 };
 
+
+
 export const InvoiceProvider = ({ children }) => {
-    const [invoices, setInvoices] = useState(() => {
-        const saved = localStorage.getItem('invoices');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const [invoices, setInvoices] = useState([]);
+    const [clients, setClients] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const [clients, setClients] = useState(() => {
-        const saved = localStorage.getItem('clients');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    useEffect(() => {
-        localStorage.setItem('invoices', JSON.stringify(invoices));
-    }, [invoices]);
-
-    useEffect(() => {
-        localStorage.setItem('clients', JSON.stringify(clients));
-    }, [clients]);
-
-    const addInvoice = (invoice) => {
-        const newInvoice = {
-            ...invoice,
-            id: Date.now().toString(),
-            createdAt: new Date().toISOString(),
-        };
-        setInvoices([newInvoice, ...invoices]);
-        return newInvoice;
+    // Helper to fetch all user data
+    const fetchUserData = async () => {
+        setLoading(true);
+        try {
+            const [inv, cli] = await Promise.all([
+                apiFetch('/invoices'),
+                apiFetch('/clients'),
+            ]);
+            setInvoices(inv.map(i => ({ ...i, id: i._id })));
+            setClients(cli.map(c => ({ ...c, id: c._id })));
+        } catch (e) {
+            setInvoices([]);
+            setClients([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const updateInvoice = (id, updatedInvoice) => {
-        setInvoices(invoices.map(inv => inv.id === id ? { ...updatedInvoice, id } : inv));
+    // Load on mount
+    useEffect(() => { fetchUserData(); }, []);
+
+    // Expose a reset method for logout
+    const resetAll = () => {
+        setInvoices([]);
+        setClients([]);
     };
 
-    const deleteInvoice = (id) => {
+    // CRUD: Invoices
+    const addInvoice = async (invoice) => {
+        const newInvoice = await apiFetch('/invoices', {
+            method: 'POST',
+            body: JSON.stringify(invoice),
+        });
+        await fetchUserData();
+        const mapped = { ...newInvoice, id: newInvoice._id };
+        return mapped;
+    };
+    const updateInvoice = async (id, updatedInvoice) => {
+        const updated = await apiFetch(`/invoices/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(updatedInvoice),
+        });
+        const mapped = { ...updated, id: updated._id };
+        setInvoices(invoices.map(inv => inv.id === id ? mapped : inv));
+    };
+    const deleteInvoice = async (id) => {
+        await apiFetch(`/invoices/${id}`, { method: 'DELETE' });
         setInvoices(invoices.filter(inv => inv.id !== id));
     };
 
-    const addClient = (client) => {
-        const newClient = {
-            ...client,
-            id: Date.now().toString(),
-        };
-        setClients([newClient, ...clients]);
-        return newClient;
+    // CRUD: Clients
+    const addClient = async (client) => {
+        const newClient = await apiFetch('/clients', {
+            method: 'POST',
+            body: JSON.stringify(client),
+        });
+        await fetchUserData();
+        const mapped = { ...newClient, id: newClient._id };
+        return mapped;
     };
-
-    const updateClient = (id, updatedClient) => {
-        setClients(clients.map(client => client.id === id ? { ...updatedClient, id } : client));
+    const updateClient = async (id, updatedClient) => {
+        const updated = await apiFetch(`/clients/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(updatedClient),
+        });
+        const mapped = { ...updated, id: updated._id };
+        setClients(clients.map(client => client.id === id ? mapped : client));
     };
-
-    const deleteClient = (id) => {
+    const deleteClient = async (id) => {
+        await apiFetch(`/clients/${id}`, { method: 'DELETE' });
         setClients(clients.filter(client => client.id !== id));
     };
 
@@ -73,6 +100,9 @@ export const InvoiceProvider = ({ children }) => {
         addClient,
         updateClient,
         deleteClient,
+        fetchUserData,
+        resetAll,
+        loading,
     };
 
     return (
@@ -81,3 +111,4 @@ export const InvoiceProvider = ({ children }) => {
         </InvoiceContext.Provider>
     );
 };
+

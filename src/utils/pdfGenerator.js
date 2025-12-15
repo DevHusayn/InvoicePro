@@ -3,23 +3,23 @@ import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { getCurrencySymbol } from './currency';
 
-export const generatePDF = (invoice, client, companyInfo) => {
+export const generatePDF = (invoice, client, businessInfo) => {
     try {
         console.log('=== PDF Generation Started ===');
         console.log('Invoice:', invoice);
         console.log('Client:', client);
-        console.log('Company Info:', companyInfo);
+        console.log('Business Info:', businessInfo);
 
         // Validate required data
-        if (!invoice || !client || !companyInfo) {
-            console.error('Missing required data:', { invoice, client, companyInfo });
+        if (!invoice || !client || !businessInfo) {
+            console.error('Missing required data:', { invoice, client, businessInfo });
             throw new Error('Missing required data for PDF generation');
         }
 
         const doc = new jsPDF();
 
-        // Get currency symbol
-        const currencySymbol = getCurrencySymbol(invoice.currency || 'USD');
+        // Get currency symbol (use 'NGN' for PDF, not ₦)
+        const currencySymbol = getCurrencySymbol(invoice.currency || 'USD', false);
 
         // Helper function to convert hex color to RGB
         const hexToRgb = (hex) => {
@@ -37,7 +37,7 @@ export const generatePDF = (invoice, client, companyInfo) => {
         };
 
         // Colors
-        const primaryColor = hexToRgb(companyInfo.brandColor || '#0ea5e9');
+        const primaryColor = hexToRgb(businessInfo.brandColor || '#0ea5e9');
         const lightPrimary = lightenColor(primaryColor, 0.85);
         const textColor = [31, 41, 55];
         const grayColor = [107, 114, 128];
@@ -45,7 +45,7 @@ export const generatePDF = (invoice, client, companyInfo) => {
         const whiteColor = [255, 255, 255];
 
         // ===== MODERN GEOMETRIC HEADER =====
-        // Top accent stripe
+        // Top accent stripe only (original design)
         doc.setFillColor(...primaryColor);
         doc.rect(0, 0, 210, 3, 'F');
 
@@ -57,19 +57,19 @@ export const generatePDF = (invoice, client, companyInfo) => {
         doc.setTextColor(...textColor);
         doc.setFontSize(22);
         doc.setFont(undefined, 'bold');
-        doc.text(String(companyInfo.name || 'Your Company'), 22, 20);
+        doc.text(String(businessInfo.name || 'Your Business'), 22, 20);
 
         doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(...grayColor);
-        const companyAddress = doc.splitTextToSize(String(companyInfo.address || ''), 80);
-        doc.text(companyAddress, 22, 28);
+        const businessAddress = doc.splitTextToSize(String(businessInfo.address || ''), 80);
+        doc.text(businessAddress, 22, 28);
 
-        const contactY = 28 + (companyAddress.length * 4);
-        doc.text(String(companyInfo.email || ''), 22, contactY);
-        doc.text(String(companyInfo.phone || ''), 22, contactY + 4);
-        if (companyInfo.website) {
-            doc.text(String(companyInfo.website), 22, contactY + 8);
+        const contactY = 28 + (businessAddress.length * 4);
+        doc.text(String(businessInfo.email || ''), 22, contactY);
+        doc.text(String(businessInfo.phone || ''), 22, contactY + 4);
+        if (businessInfo.website) {
+            doc.text(String(businessInfo.website), 22, contactY + 8);
         }
 
         // INVOICE title with modern styling - right side
@@ -120,7 +120,6 @@ export const generatePDF = (invoice, client, companyInfo) => {
         const statusColors = {
             paid: [34, 197, 94],
             pending: [234, 179, 8],
-            'partial-payment': [59, 130, 246],
             overdue: [239, 68, 68],
             cancelled: [156, 163, 175],
         };
@@ -149,7 +148,6 @@ export const generatePDF = (invoice, client, companyInfo) => {
 
         // ===== ITEMS TABLE WITH MODERN DESIGN =====
         const tableStartY = 112;
-        const isPartialPayment = invoice.status === 'partial-payment';
 
         // Validate items array
         if (!invoice.items || !Array.isArray(invoice.items) || invoice.items.length === 0) {
@@ -157,48 +155,20 @@ export const generatePDF = (invoice, client, companyInfo) => {
             throw new Error('Invoice must have at least one item');
         }
 
-        let tableHead, tableData, columnStyles;
-
-        if (isPartialPayment) {
-            // Partial payment table with Amount, Amount Paid, Balance columns
-            tableHead = [['DESCRIPTION', 'QTY', 'RATE', 'AMOUNT', 'PAID', 'BALANCE']];
-            tableData = invoice.items.map(item => {
-                const amount = Number(item.quantity || 0) * Number(item.rate || 0);
-                const paid = Number(item.amountPaid) || 0;
-                const balance = amount - paid;
-                return [
-                    item.description || '',
-                    (item.quantity || 0).toString(),
-                    `${currencySymbol} ${Number(item.rate || 0).toFixed(2)}`,
-                    `${currencySymbol} ${amount.toFixed(2)}`,
-                    `${currencySymbol} ${paid.toFixed(2)}`,
-                    `${currencySymbol} ${balance.toFixed(2)}`
-                ];
-            });
-            columnStyles = {
-                0: { cellWidth: 55, halign: 'left', textColor: textColor },
-                1: { cellWidth: 15, halign: 'center', textColor: grayColor },
-                2: { cellWidth: 25, halign: 'center', textColor: grayColor },
-                3: { cellWidth: 30, halign: 'center', textColor: textColor },
-                4: { cellWidth: 30, halign: 'center', textColor: [34, 197, 94], fontStyle: 'bold' },
-                5: { cellWidth: 30, halign: 'center', fontStyle: 'bold', textColor: textColor },
-            };
-        } else {
-            // Regular table
-            tableHead = [['DESCRIPTION', 'QTY', 'RATE', 'AMOUNT']];
-            tableData = invoice.items.map(item => [
-                item.description || '',
-                (item.quantity || 0).toString(),
-                `${currencySymbol} ${Number(item.rate || 0).toFixed(2)}`,
-                `${currencySymbol} ${(Number(item.quantity || 0) * Number(item.rate || 0)).toFixed(2)}`
-            ]);
-            columnStyles = {
-                0: { cellWidth: 85, halign: 'left', textColor: textColor },
-                1: { cellWidth: 25, halign: 'center', textColor: grayColor },
-                2: { cellWidth: 42, halign: 'center', textColor: grayColor },
-                3: { cellWidth: 42, halign: 'center', fontStyle: 'bold', textColor: textColor },
-            };
-        }
+        // Regular table only
+        const tableHead = [['DESCRIPTION', 'QTY', 'RATE', 'AMOUNT']];
+        const tableData = invoice.items.map(item => [
+            item.description || '',
+            (item.quantity || 0).toString(),
+            `${currencySymbol} ${Number(item.rate || 0).toFixed(2)}`,
+            `${currencySymbol} ${(Number(item.quantity || 0) * Number(item.rate || 0)).toFixed(2)}`
+        ]);
+        const columnStyles = {
+            0: { cellWidth: 85, halign: 'left', textColor: textColor },
+            1: { cellWidth: 25, halign: 'center', textColor: grayColor },
+            2: { cellWidth: 42, halign: 'center', textColor: grayColor },
+            3: { cellWidth: 42, halign: 'center', fontStyle: 'bold', textColor: textColor },
+        };
 
         doc.autoTable({
             startY: tableStartY,
@@ -229,6 +199,7 @@ export const generatePDF = (invoice, client, companyInfo) => {
         const finalY = doc.lastAutoTable.finalY + 15;
         const totalsX = 130;
 
+
         // Subtotal
         doc.setFontSize(9);
         doc.setTextColor(...grayColor);
@@ -252,66 +223,37 @@ export const generatePDF = (invoice, client, companyInfo) => {
         doc.line(totalsX, finalY + 13, 195, finalY + 13);
 
         // Total - clean layout without background
-        doc.setFontSize(11);
+        doc.setFontSize(10); // Decreased font size for total label
         doc.setFont(undefined, 'bold');
         doc.setTextColor(...textColor);
         doc.text('Total', totalsX, finalY + 22);
 
-        doc.setFontSize(13);
+        doc.setFontSize(11); // Decreased font size for total amount
         doc.setTextColor(...textColor);
         const totalAmountText = `${currencySymbol} ${Number(invoice.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         doc.text(totalAmountText, 195, finalY + 22, { align: 'right' });
 
         let currentY = finalY + 22;
 
-        // Amount Paid (if any)
-        const amountPaid = Number(invoice.amountPaid) || 0;
-        if (amountPaid > 0) {
-            currentY += 8;
-            doc.setFontSize(9);
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(...grayColor);
-            doc.text('Amount Paid', totalsX, currentY);
-            doc.setTextColor([34, 197, 94]); // green
-            const paidText = `-${currencySymbol} ${amountPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            doc.text(paidText, 195, currentY, { align: 'right' });
+        // Only show TOTAL DUE (no partial/amount paid/balance logic)
+        let total = Number(invoice.total);
+        if (isNaN(total) || total < 0) total = 0;
 
-            // Balance line
-            currentY += 5;
-            doc.setDrawColor(...primaryColor);
-            doc.setLineWidth(0.5);
-            doc.line(totalsX, currentY, 195, currentY);
+        currentY += 5;
+        doc.setDrawColor(...primaryColor);
+        doc.setLineWidth(0.5);
+        doc.line(totalsX, currentY, 195, currentY);
 
-            // Balance Due
-            currentY += 8;
-            doc.setFontSize(12);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(...primaryColor);
-            doc.text('BALANCE DUE', totalsX, currentY);
+        currentY += 8;
+        doc.setFontSize(10); // Decreased font size for TOTAL DUE label
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text('TOTAL DUE', totalsX, currentY);
 
-            doc.setFontSize(14);
-            doc.setTextColor(...primaryColor);
-            const balance = Number(invoice.balance) || (Number(invoice.total) - amountPaid);
-            const balanceText = `${currencySymbol} ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            doc.text(balanceText, 195, currentY, { align: 'right' });
-        } else {
-            // If no payment, show TOTAL DUE
-            currentY += 5;
-            doc.setDrawColor(...primaryColor);
-            doc.setLineWidth(0.5);
-            doc.line(totalsX, currentY, 195, currentY);
-
-            currentY += 8;
-            doc.setFontSize(12);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(...primaryColor);
-            doc.text('TOTAL DUE', totalsX, currentY);
-
-            doc.setFontSize(14);
-            doc.setTextColor(...primaryColor);
-            const totalText = `${currencySymbol} ${Number(invoice.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            doc.text(totalText, 195, currentY, { align: 'right' });
-        }
+        doc.setFontSize(11); // Decreased font size for TOTAL DUE amount
+        doc.setTextColor(...primaryColor);
+        const totalText = `${currencySymbol} ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        doc.text(totalText, 195, currentY, { align: 'right' });
 
         // ===== NOTES SECTION =====
         if (invoice.notes) {
@@ -345,7 +287,7 @@ export const generatePDF = (invoice, client, companyInfo) => {
         doc.text('Thank you for your business!', 105, 285, { align: 'center' });
 
         doc.setFontSize(7);
-        const footerText = `${String(companyInfo.name || 'Company')} • ${String(companyInfo.email || '')} • ${String(companyInfo.phone || '')}`;
+        const footerText = `${String(businessInfo.name || 'Business')} • ${String(businessInfo.email || '')} • ${String(businessInfo.phone || '')}`;
         doc.text(footerText, 105, 290, { align: 'center' });
 
         // Bottom accent stripe

@@ -17,14 +17,15 @@ export const CURRENCIES = [
     { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar' },
 ];
 
-export const getCurrencySymbol = (code) => {
+// showNairaSign: true = show ₦, false = show NGN (for PDF)
+export const getCurrencySymbol = (code, showNairaSign = true) => {
     const currency = CURRENCIES.find(c => c.code === code);
-    // Use code for NGN since symbol doesn't render well in PDF
-    if (code === 'NGN') return 'NGN';
+    if (code === 'NGN') return showNairaSign ? '₦' : 'NGN';
     return currency ? currency.symbol : '$';
 };
 
-export const formatCurrency = (amount, currencyCode = 'USD') => {
-    const symbol = getCurrencySymbol(currencyCode);
+// showNairaSign: true = show ₦, false = show NGN (for PDF)
+export const formatCurrency = (amount, currencyCode = 'USD', showNairaSign = true) => {
+    const symbol = getCurrencySymbol(currencyCode, showNairaSign);
     return `${symbol}${Number(amount).toFixed(2)}`;
 };

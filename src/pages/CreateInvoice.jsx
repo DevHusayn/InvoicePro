@@ -10,7 +10,7 @@ const CreateInvoice = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { clients, addInvoice, updateInvoice, invoices } = useInvoice();
-    const { companyInfo } = useSettings();
+    const { businessInfo } = useSettings();
 
     const [formData, setFormData] = useState({
         invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
@@ -20,8 +20,11 @@ const CreateInvoice = () => {
         items: [{ description: '', quantity: 1, rate: 0, amountPaid: 0 }],
         notes: '',
         status: 'pending',
-        currency: companyInfo.defaultCurrency || 'USD',
-        taxRate: companyInfo.taxRate || 10,
+        currency: businessInfo.defaultCurrency || 'USD',
+        taxRate: 0,
+        isRecurring: false,
+        recurringFrequency: 'monthly',
+        recurringEndDate: '',
     });
 
     useEffect(() => {
@@ -64,7 +67,8 @@ const CreateInvoice = () => {
     };
 
     const calculateTax = () => {
-        const taxRate = Number(formData.taxRate) || 10;
+        const taxRate = Number(formData.taxRate);
+        if (isNaN(taxRate) || taxRate <= 0) return 0;
         return calculateSubtotal() * (taxRate / 100);
     };
 
@@ -73,23 +77,10 @@ const CreateInvoice = () => {
     };
 
     const calculateBalance = () => {
-        if (formData.status === 'partial-payment') {
-            const totalPaid = formData.items.reduce((sum, item) => {
-                return sum + (Number(item.amountPaid) || 0);
-            }, 0);
-            return calculateTotal() - totalPaid;
-        }
         return calculateTotal();
     };
 
-    const calculateTotalPaid = () => {
-        if (formData.status === 'partial-payment') {
-            return formData.items.reduce((sum, item) => {
-                return sum + (Number(item.amountPaid) || 0);
-            }, 0);
-        }
-        return 0;
-    };
+    // Removed partial payment logic
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -104,7 +95,6 @@ const CreateInvoice = () => {
             subtotal: calculateSubtotal(),
             tax: calculateTax(),
             total: calculateTotal(),
-            amountPaid: calculateTotalPaid(),
             balance: calculateBalance(),
         };
 
@@ -164,7 +154,6 @@ const CreateInvoice = () => {
                                     >
                                         <option value="pending">Pending</option>
                                         <option value="paid">Paid</option>
-                                        <option value="partial-payment">Partial Payment</option>
                                         <option value="overdue">Overdue</option>
                                         <option value="cancelled">Cancelled</option>
                                     </select>
@@ -223,10 +212,64 @@ const CreateInvoice = () => {
                                 </div>
                             </div>
                         </div>
+                        {/* Recurring Invoice Card */}
+                        <div className="card">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-4">Recurring Invoice</h2>
+                            <div className="flex items-center gap-3 mb-4">
+                                <input
+                                    type="checkbox"
+                                    id="isRecurring"
+                                    checked={formData.isRecurring}
+                                    onChange={e => setFormData({ ...formData, isRecurring: e.target.checked })}
+                                    className="h-5 w-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                                />
+                                <label htmlFor="isRecurring" className="text-base font-medium text-gray-700 select-none">Make this a recurring invoice</label>
+                            </div>
+                            {formData.isRecurring && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="label">Frequency</label>
+                                        <select
+                                            name="recurringFrequency"
+                                            value={formData.recurringFrequency}
+                                            onChange={handleChange}
+                                            className="input-field"
+                                        >
+                                            <option value="weekly">Weekly</option>
+                                            <option value="biweekly">Bi-Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                            <option value="quarterly">Quarterly</option>
+                                            <option value="yearly">Yearly</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">End Date</label>
+                                        <input
+                                            type="date"
+                                            name="recurringEndDate"
+                                            value={formData.recurringEndDate}
+                                            onChange={handleChange}
+                                            className="input-field"
+                                            min={formData.date}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Leave blank for no end date (infinite recurrence)</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Client Selection Card */}
                         <div className="card">
-                            <h2 className="text-xl font-semibold text-gray-900 mb-4">Client Information</h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-semibold text-gray-900">Client Information</h2>
+                                <a
+                                    href="/clients"
+                                    className="text-primary-600 text-sm font-medium hover:underline"
+                                    style={{ whiteSpace: 'nowrap' }}
+                                >
+                                    + Add New Client
+                                </a>
+                            </div>
                             <div>
                                 <label className="label">Select Client</label>
                                 <select
@@ -303,25 +346,12 @@ const CreateInvoice = () => {
                                                     required
                                                 />
                                             </div>
-                                            {formData.status === 'partial-payment' && (
-                                                <div className="md:col-span-2">
-                                                    <label className="label">Amount Paid</label>
-                                                    <input
-                                                        type="number"
-                                                        value={item.amountPaid || 0}
-                                                        onChange={(e) => handleItemChange(index, 'amountPaid', e.target.value)}
-                                                        className="input-field"
-                                                        min="0"
-                                                        step="0.01"
-                                                        placeholder="0.00"
-                                                    />
-                                                </div>
-                                            )}
-                                            <div className={formData.status === 'partial-payment' ? 'md:col-span-2' : 'md:col-span-2'} >
+                                            {/* Removed Amount Paid field for partial payment */}
+                                            <div className={'md:col-span-2'} >
                                                 <div className="flex flex-col justify-end h-full">
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-sm font-medium text-gray-700">
-                                                            {formatCurrency(item.quantity * item.rate, formData.currency)}
+                                                            {formatCurrency(item.quantity * item.rate, formData.currency, true)}
                                                         </span>
                                                         {formData.items.length > 1 && (
                                                             <button
@@ -351,6 +381,7 @@ const CreateInvoice = () => {
                                 className="input-field resize-none"
                                 rows="4"
                                 placeholder="Add any additional information or payment terms..."
+                                style={{ resize: 'none' }}
                             />
                         </div>
                     </div>
@@ -372,33 +403,20 @@ const CreateInvoice = () => {
                             <div className="space-y-3 mb-6">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-600">Subtotal:</span>
-                                    <span className="font-medium text-gray-900">{formatCurrency(calculateSubtotal(), formData.currency)}</span>
+                                    <span className="font-medium text-gray-900">{formatCurrency(calculateSubtotal(), formData.currency, true)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-600">Tax ({formData.taxRate}%):</span>
-                                    <span className="font-medium text-gray-900">{formatCurrency(calculateTax(), formData.currency)}</span>
+                                    <span className="font-medium text-gray-900">{formatCurrency(calculateTax(), formData.currency, true)}</span>
                                 </div>
                                 <div className="pt-3 border-t border-gray-200">
                                     <div className="flex justify-between mb-2">
                                         <span className="text-lg font-semibold text-gray-900">Total:</span>
                                         <span className="text-2xl font-bold text-primary-600">
-                                            {formatCurrency(calculateTotal(), formData.currency)}
+                                            {formatCurrency(calculateTotal(), formData.currency, true)}
                                         </span>
                                     </div>
-                                    {formData.status === 'partial-payment' && calculateTotalPaid() > 0 && (
-                                        <>
-                                            <div className="flex justify-between text-sm mt-2">
-                                                <span className="text-gray-600">Amount Paid:</span>
-                                                <span className="font-medium text-green-600">-{formatCurrency(calculateTotalPaid(), formData.currency)}</span>
-                                            </div>
-                                            <div className="flex justify-between mt-2 pt-2 border-t border-gray-200">
-                                                <span className="text-base font-semibold text-gray-900">Balance Due:</span>
-                                                <span className="text-xl font-bold text-orange-600">
-                                                    {formatCurrency(calculateBalance(), formData.currency)}
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
+                                    {/* Removed partial payment summary */}
                                 </div>
                             </div>
 

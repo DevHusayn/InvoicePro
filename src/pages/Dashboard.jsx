@@ -7,22 +7,16 @@ import { formatCurrency } from '../utils/currency';
 
 const Dashboard = () => {
     const { invoices, clients } = useInvoice();
-    const { companyInfo } = useSettings();
+    const { businessInfo } = useSettings();
     const navigate = useNavigate();
 
     const totalRevenue = invoices
         .filter(inv => inv.status === 'paid')
-        .reduce((sum, inv) => sum + inv.total, 0) +
-        invoices
-            .filter(inv => inv.status === 'partial-payment')
-            .reduce((sum, inv) => sum + (inv.amountPaid || 0), 0);
+        .reduce((sum, inv) => sum + inv.total, 0);
 
     const pendingRevenue = invoices
         .filter(inv => inv.status === 'pending')
-        .reduce((sum, inv) => sum + inv.total, 0) +
-        invoices
-            .filter(inv => inv.status === 'partial-payment')
-            .reduce((sum, inv) => sum + (inv.balance || 0), 0);
+        .reduce((sum, inv) => sum + inv.total, 0);
 
     const overdueInvoices = invoices.filter(inv => inv.status === 'overdue');
 
@@ -49,7 +43,7 @@ const Dashboard = () => {
         },
         {
             name: 'Revenue (Paid)',
-            value: formatCurrency(totalRevenue, companyInfo.defaultCurrency || 'USD'),
+            value: formatCurrency(totalRevenue, businessInfo.defaultCurrency || 'USD', true),
             icon: DollarSign,
             color: 'bg-green-500',
             bgLight: 'bg-green-50',
@@ -57,7 +51,7 @@ const Dashboard = () => {
         },
         {
             name: 'Pending Revenue',
-            value: formatCurrency(pendingRevenue, companyInfo.defaultCurrency || 'USD'),
+            value: formatCurrency(pendingRevenue, businessInfo.defaultCurrency || 'USD', true),
             icon: Clock,
             color: 'bg-yellow-500',
             bgLight: 'bg-yellow-50',
@@ -74,7 +68,6 @@ const Dashboard = () => {
         const colors = {
             pending: 'bg-yellow-100 text-yellow-800',
             paid: 'bg-green-100 text-green-800',
-            'partial-payment': 'bg-blue-100 text-blue-800',
             overdue: 'bg-red-100 text-red-800',
             cancelled: 'bg-gray-100 text-gray-800',
         };
@@ -83,25 +76,23 @@ const Dashboard = () => {
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                <p className="mt-2 text-gray-600">Welcome back! Here's an overview of your invoicing</p>
+            <div className="mb-10">
+                <h1 className="text-3xl font-extrabold text-primary-700">Dashboard</h1>
+                <p className="mt-2 text-gray-500 text-lg">Welcome back! Here's an overview of your invoicing</p>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
                 {stats.map((stat) => {
                     const Icon = stat.icon;
                     return (
-                        <div key={stat.name} className="card">
-                            <div className="flex items-center">
-                                <div className={`${stat.bgLight} p-3 rounded-lg`}>
-                                    <Icon className={`h-6 w-6 ${stat.textColor}`} />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm text-gray-500">{stat.name}</p>
-                                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                                </div>
+                        <div key={stat.name} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 flex items-center gap-4">
+                            <div className={`${stat.bgLight} p-4 rounded-xl flex items-center justify-center`}>
+                                <Icon className={`h-7 w-7 ${stat.textColor}`} />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500 font-semibold">{stat.name}</p>
+                                <p className="text-2xl font-extrabold text-gray-900">{stat.value}</p>
                             </div>
                         </div>
                     );
@@ -109,26 +100,26 @@ const Dashboard = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="card mb-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 mb-10 p-6">
+                <h2 className="text-xl font-bold text-primary-700 mb-4">Quick Actions</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button
                         onClick={() => navigate('/invoices/create')}
-                        className="btn-primary justify-start"
+                        className="bg-primary-600 hover:bg-primary-700 text-white font-semibold flex items-center gap-2 px-6 py-4 rounded-xl shadow-md transition justify-start"
                     >
                         <FileText size={20} />
                         Create New Invoice
                     </button>
                     <button
                         onClick={() => navigate('/clients')}
-                        className="btn-secondary justify-start"
+                        className="bg-primary-100 hover:bg-primary-200 text-primary-700 font-semibold flex items-center gap-2 px-6 py-4 rounded-xl shadow-md transition justify-start"
                     >
                         <Users size={20} />
                         Manage Clients
                     </button>
                     <button
                         onClick={() => navigate('/invoices')}
-                        className="btn-secondary justify-start"
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold flex items-center gap-2 px-6 py-4 rounded-xl shadow-md transition justify-start"
                     >
                         <TrendingUp size={20} />
                         View All Invoices
@@ -138,15 +129,15 @@ const Dashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Recent Invoices */}
-                <div className="card">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Invoices</h2>
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <h2 className="text-xl font-bold text-primary-700 mb-4">Recent Invoices</h2>
                     {recentInvoices.length === 0 ? (
-                        <div className="text-center py-8">
-                            <FileText className="mx-auto h-10 w-10 text-gray-400" />
-                            <p className="mt-2 text-gray-500">No invoices yet</p>
+                        <div className="text-center py-10">
+                            <FileText className="mx-auto h-12 w-12 text-gray-300" />
+                            <p className="mt-3 text-gray-500 text-base">No invoices yet</p>
                             <button
                                 onClick={() => navigate('/invoices/create')}
-                                className="btn-primary mt-4"
+                                className="mt-6 bg-primary-600 hover:bg-primary-700 text-white font-semibold flex items-center gap-2 px-6 py-3 rounded-xl shadow-md transition"
                             >
                                 Create Your First Invoice
                             </button>
@@ -156,17 +147,17 @@ const Dashboard = () => {
                             {recentInvoices.map((invoice) => (
                                 <div
                                     key={invoice.id}
-                                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer border border-gray-100"
                                     onClick={() => navigate(`/invoices/edit/${invoice.id}`)}
                                 >
                                     <div className="flex-1">
-                                        <p className="font-medium text-gray-900">{invoice.invoiceNumber}</p>
-                                        <p className="text-sm text-gray-600">{getClientName(invoice.clientId)}</p>
+                                        <p className="font-semibold text-gray-900">{invoice.invoiceNumber}</p>
+                                        <p className="text-sm text-gray-500">{getClientName(invoice.clientId)}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-gray-900">{formatCurrency(invoice.total, invoice.currency || 'USD')}</p>
-                                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)} capitalize mt-1`}>
-                                            {invoice.status === 'partial-payment' ? 'Partial Payment' : invoice.status}
+                                        <p className="font-bold text-primary-700">{formatCurrency(invoice.total, invoice.currency || 'USD', true)}</p>
+                                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(invoice.status)} capitalize mt-1`}>
+                                            {invoice.status}
                                         </span>
                                     </div>
                                 </div>
@@ -176,12 +167,12 @@ const Dashboard = () => {
                 </div>
 
                 {/* Overdue & Alerts */}
-                <div className="card">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Alerts & Notifications</h2>
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <h2 className="text-xl font-bold text-primary-700 mb-4">Alerts & Notifications</h2>
                     {overdueInvoices.length === 0 ? (
-                        <div className="text-center py-8">
-                            <CheckCircle className="mx-auto h-10 w-10 text-green-500" />
-                            <p className="mt-2 font-medium text-gray-900">All caught up!</p>
+                        <div className="text-center py-10">
+                            <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
+                            <p className="mt-3 font-semibold text-gray-900">All caught up!</p>
                             <p className="text-gray-500">No overdue invoices</p>
                         </div>
                     ) : (
@@ -189,17 +180,17 @@ const Dashboard = () => {
                             {overdueInvoices.map((invoice) => (
                                 <div
                                     key={invoice.id}
-                                    className="p-3 bg-red-50 border border-red-200 rounded-lg"
+                                    className="p-4 bg-red-50 border border-red-200 rounded-xl"
                                 >
                                     <div className="flex items-start justify-between">
                                         <div>
-                                            <p className="font-medium text-gray-900">{invoice.invoiceNumber}</p>
-                                            <p className="text-sm text-gray-600">{getClientName(invoice.clientId)}</p>
+                                            <p className="font-semibold text-gray-900">{invoice.invoiceNumber}</p>
+                                            <p className="text-sm text-gray-500">{getClientName(invoice.clientId)}</p>
                                             <p className="text-xs text-red-600 mt-1">
                                                 Due: {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
                                             </p>
                                         </div>
-                                        <p className="font-semibold text-red-600">{formatCurrency(invoice.total, invoice.currency || 'USD')}</p>
+                                        <p className="font-bold text-red-600">{formatCurrency(invoice.total, invoice.currency || 'USD', true)}</p>
                                     </div>
                                 </div>
                             ))}

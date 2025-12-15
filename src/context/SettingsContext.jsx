@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { apiFetch } from '../utils/api';
 
 const SettingsContext = createContext();
 
@@ -10,32 +11,42 @@ export const useSettings = () => {
     return context;
 };
 
+
 export const SettingsProvider = ({ children }) => {
-    const [companyInfo, setCompanyInfo] = useState(() => {
-        const saved = localStorage.getItem('companyInfo');
-        return saved ? JSON.parse(saved) : {
-            name: 'Your Company Name',
-            address: 'Your Address',
-            email: 'your@email.com',
-            phone: 'Your Phone Number',
-            website: '',
-            defaultCurrency: 'USD',
-            taxRate: 10,
-            brandColor: '#0ea5e9', // primary-500 blue
-        };
+    const [businessInfo, setBusinessInfo] = useState({
+        name: '', address: '', email: '', phone: '', website: '', defaultCurrency: 'USD', taxRate: 10, brandColor: '#0ea5e9',
     });
+    const [loading, setLoading] = useState(true);
 
+    // Load business info from backend on mount
     useEffect(() => {
-        localStorage.setItem('companyInfo', JSON.stringify(companyInfo));
-    }, [companyInfo]);
+        async function fetchBusinessInfo() {
+            setLoading(true);
+            try {
+                const info = await apiFetch('/business-info');
+                setBusinessInfo(info);
+            } catch (e) {
+                setBusinessInfo({ name: '', address: '', email: '', phone: '', website: '', defaultCurrency: 'USD', taxRate: 10, brandColor: '#0ea5e9' });
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchBusinessInfo();
+    }, []);
 
-    const updateCompanyInfo = (info) => {
-        setCompanyInfo(info);
+    const updateBusinessInfo = async (info) => {
+        const updated = await apiFetch('/business-info', {
+            method: 'PUT',
+            body: JSON.stringify(info),
+        });
+        setBusinessInfo(updated);
     };
 
     const value = {
-        companyInfo,
-        updateCompanyInfo,
+        businessInfo,
+        updateBusinessInfo,
+        setBusinessInfo,
+        loading,
     };
 
     return (

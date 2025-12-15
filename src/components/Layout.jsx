@@ -1,16 +1,35 @@
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, Settings as SettingsIcon, Menu, X } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, FileText, Users, Settings as SettingsIcon, Menu, X, LogOut } from 'lucide-react';
 import { useState } from 'react';
+import { useSettings } from '../context/SettingsContext';
+import { useInvoice } from '../context/InvoiceContext';
+import ConfirmModal from './ConfirmModal';
 
 const Layout = ({ children }) => {
     const location = useLocation();
+    const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const { setBusinessInfo } = useSettings();
+    const { resetAll } = useInvoice();
+    const isLoggedIn = Boolean(localStorage.getItem('token'));
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('isAdmin');
+        setBusinessInfo({ name: '', address: '', email: '', phone: '', website: '', defaultCurrency: 'USD', taxRate: 10, brandColor: '#0ea5e9' });
+        resetAll();
+        // Dispatch a custom event so Auth.jsx can reset its form
+        window.dispatchEvent(new Event('app-logout'));
+        navigate('/auth');
+    };
 
     const navigation = [
         { name: 'Dashboard', href: '/', icon: LayoutDashboard },
         { name: 'Invoices', href: '/invoices', icon: FileText },
         { name: 'Clients', href: '/clients', icon: Users },
         { name: 'Settings', href: '/settings', icon: SettingsIcon },
+        ...(isAdmin ? [{ name: 'Admin Dashboard', href: '/admin', icon: LayoutDashboard }] : []),
     ];
 
     const isActive = (path) => location.pathname === path;
@@ -42,6 +61,15 @@ const Layout = ({ children }) => {
                                     </Link>
                                 );
                             })}
+                            {isLoggedIn && (
+                                <button
+                                    onClick={() => setShowLogoutModal(true)}
+                                    className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-primary-100 hover:bg-primary-800 hover:text-white transition-colors duration-200 mt-4"
+                                >
+                                    <LogOut className="mr-3 h-5 w-5" />
+                                    Logout
+                                </button>
+                            )}
                         </nav>
                     </div>
                     <div className="flex flex-shrink-0 bg-primary-800 p-4">
@@ -89,6 +117,18 @@ const Layout = ({ children }) => {
                                     </Link>
                                 );
                             })}
+                            {isLoggedIn && (
+                                <button
+                                    onClick={() => {
+                                        setSidebarOpen(false);
+                                        setShowLogoutModal(true);
+                                    }}
+                                    className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-primary-100 hover:bg-primary-800 hover:text-white transition-colors duration-200 mt-4"
+                                >
+                                    <LogOut className="mr-3 h-5 w-5" />
+                                    Logout
+                                </button>
+                            )}
                         </nav>
                     </div>
                 </div>
@@ -103,13 +143,16 @@ const Layout = ({ children }) => {
                             <FileText className="h-7 w-7 text-primary-600 mr-2" />
                             <span className="text-xl font-bold text-gray-900">InvoicePro</span>
                         </div>
-                        <button
-                            type="button"
-                            className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
-                            onClick={() => setSidebarOpen(true)}
-                        >
-                            <Menu className="h-6 w-6" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                                onClick={() => setSidebarOpen(true)}
+                            >
+                                <Menu className="h-6 w-6" />
+                            </button>
+                            {/* Logout button removed from mobile header; now only in sidebar */}
+                        </div>
                     </div>
                 </div>
 
@@ -119,6 +162,12 @@ const Layout = ({ children }) => {
                     </div>
                 </main>
             </div>
+            <ConfirmModal
+                open={showLogoutModal}
+                onConfirm={() => { setShowLogoutModal(false); handleLogout(); }}
+                onCancel={() => setShowLogoutModal(false)}
+                message="Are you sure you want to log out?"
+            />
         </div>
     );
 };
