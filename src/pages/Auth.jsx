@@ -6,7 +6,7 @@ import { useInvoice } from '../context/InvoiceContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CURRENCIES } from '../utils/currency';
 
-const API_URL = 'http://localhost:5000/api/auth';
+const API_URL = import.meta.env.VITE_API_URL + '/auth';
 
 function Auth() {
     const { setBusinessInfo } = useSettings();
@@ -90,7 +90,7 @@ function Auth() {
             await fetchUserData();
             // Always fetch the latest business info after login or registration
             try {
-                const res = await fetch('http://localhost:5000/api/business-info', {
+                const res = await fetch(import.meta.env.VITE_API_URL + '/business-info', {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${data.token}`
@@ -120,7 +120,7 @@ function Auth() {
                             e.preventDefault();
                             setResetLoading(true);
                             try {
-                                const res = await fetch('http://localhost:5000/api/auth/forgot-password', {
+                                const res = await fetch(import.meta.env.VITE_API_URL + '/auth/forgot-password', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ email: resetEmail }),
