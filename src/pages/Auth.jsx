@@ -6,7 +6,9 @@ import { useInvoice } from '../context/InvoiceContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CURRENCIES } from '../utils/currency';
 
-const API_URL = import.meta.env.VITE_API_URL + '/auth';
+// Unified URL Configuration
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const AUTH_URL = `${BASE_URL}/auth`;
 
 function Auth() {
     const { setBusinessInfo } = useSettings();
@@ -73,7 +75,7 @@ function Auth() {
                     brandColor: form.brandColor,
                 };
             }
-            const res = await fetch(`${API_URL}/${isLogin ? 'login' : 'register'}`, {
+            const res = await fetch(`${AUTH_URL}/${isLogin ? 'login' : 'register'}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -90,17 +92,19 @@ function Auth() {
             await fetchUserData();
             // Always fetch the latest business info after login or registration
             try {
-                const res = await fetch(import.meta.env.VITE_API_URL + '/business-info', {
+                const businessRes = await fetch(`${BASE_URL}/business-info`, {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${data.token}`
                     }
                 });
-                if (res.ok) {
-                    const info = await res.json();
+                if (businessRes.ok) {
+                    const info = await businessRes.json();
                     setBusinessInfo(info);
                 }
-            } catch { }
+            } catch (businessErr) {
+                console.error("Failed to fetch business info:", businessErr);
+            }
             navigate('/');
         } catch (err) {
             setError(err.message);
@@ -120,7 +124,7 @@ function Auth() {
                             e.preventDefault();
                             setResetLoading(true);
                             try {
-                                const res = await fetch(import.meta.env.VITE_API_URL + '/auth/forgot-password', {
+                                const res = await fetch(`${AUTH_URL}/forgot-password`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ email: resetEmail }),
