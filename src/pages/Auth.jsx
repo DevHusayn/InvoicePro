@@ -35,10 +35,17 @@ function Auth() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Reset form fields when Auth page is shown (route changes to /auth), switching login/register, or on logout
+    // Always reset form fields when Auth page is shown, switching login/register, or on logout
     useEffect(() => {
         setForm(initialForm);
     }, [isLogin, location.pathname, location.key]);
+
+    // Extra: force reset when arriving at /auth route (even if already there)
+    useEffect(() => {
+        if (location.pathname === '/auth') {
+            setForm(initialForm);
+        }
+    }, [location.pathname, location.key]);
 
     useEffect(() => {
         const resetForm = () => setForm(initialForm);

@@ -27,5 +27,6 @@ export const getCurrencySymbol = (code, showNairaSign = true) => {
 // showNairaSign: true = show ₦, false = show NGN (for PDF)
 export const formatCurrency = (amount, currencyCode = 'USD', showNairaSign = true) => {
     const symbol = getCurrencySymbol(currencyCode, showNairaSign);
-    return `${symbol}${Number(amount).toFixed(2)}`;
+    // Use toLocaleString for comma separation
+    return `${symbol}${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
