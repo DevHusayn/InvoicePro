@@ -14,7 +14,6 @@ A professional, full-featured invoice generator built with React, designed to he
 - **🎨 Professional Design**: Clean, modern interface with a polished color scheme
 - **💼 Status Tracking**: Track invoice status (Pending, Paid, Overdue, Cancelled)
 - **🔢 Automatic Calculations**: Auto-calculate subtotals, taxes, and totals
-- **💿 Local Storage**: All data persists in browser local storage
 
 ## 🚀 Getting Started
 
@@ -131,4 +130,5 @@ Built with ❤️ as part of a professional portfolio
 
 ---
 
-**Note**: This is a frontend-only application. All data is stored in browser local storage. For production use with multiple users, consider integrating a backend API and database.
+## Here is the live link of ghe site 
+https://invoice-pro-d1hh.vercel.app
