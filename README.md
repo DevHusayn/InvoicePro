@@ -130,5 +130,5 @@ Built with ❤️ as part of a professional portfolio
 
 ---
 
-## Here is the live link of ghe site 
+## Here is the live link of the site 
 https://invoice-pro-d1hh.vercel.app
